@@ -66,6 +66,123 @@ ORDER BY
 As we can see, the customer or casual user spends 3 times more in average per ride than the Subscriber.
 
 ### 3. Segregating info by usertype
+#### Subscribers
+Let's dig into the Subscribers to understand them better. The following query t displays the month, the usertype, number of rides per month and average time per ride of the user type "Subscriber", ordered by the number of rides in descending order:
+```sql
+SELECT CASE 
+  WHEN extract(MONTH FROM start_time) = 1 THEN "JANUARY" 
+  WHEN extract(MONTH FROM start_time) = 2 THEN "FEBRUARY"
+  ELSE "MACRH"
+  END AS month_start_ride,
+  usertype, 
+COUNT(trip_id) as rides_per_month,
+ROUND(AVG(tripduration/60), 2) avg_time_month
+FROM `my-data-project-1-407722.cyclistic_trips.2019_Q1`
+WHERE usertype = "Subscriber"
+group by month_start_ride, usertype
+order by rides_per_month DESC
+
+| Row | month_start_ride | usertype   | rides_per_month | avg_time_month |
+|-----|------------------|------------|-----------------|----------------|
+| 1   | MARCH            | Subscriber | 149688          | 13.04          |
+| 2   | JANUARY          | Subscriber | 98670           | 15.65          |
+| 3   | FEBRUARY         | Subscriber | 93548           | 13.4           |
+```
+As we can see, March was the month of the first quarter with more number of rides, and interestingly with the shortest avergage ride time.
+#### Customers
+Let's repeat the query for the Customers, but let's use the UNION ALL function to display all info together. We need to be carefull with the ORDER BY and GROUP BY clauses when unifying queries:
+```sql
+SELECT 
+  month_start_ride,
+  usertype, 
+  SUM(rides_per_month) AS rides_per_month,
+  AVG(avg_time_month) AS avg_time_month
+FROM (
+  SELECT 
+    CASE 
+      WHEN EXTRACT(MONTH FROM start_time) = 1 THEN "JANUARY" 
+      WHEN EXTRACT(MONTH FROM start_time) = 2 THEN "FEBRUARY"
+      ELSE "MARCH"
+    END AS month_start_ride,
+    usertype, 
+    COUNT(trip_id) AS rides_per_month,
+    ROUND(AVG(tripduration/60), 2) AS avg_time_month
+  FROM `my-data-project-1-407722.cyclistic_trips.2019_Q1`
+  WHERE usertype = "Subscriber"
+  GROUP BY month_start_ride, usertype
+  
+  UNION ALL
+  
+  SELECT 
+    CASE 
+      WHEN EXTRACT(MONTH FROM start_time) = 1 THEN "JANUARY" 
+      WHEN EXTRACT(MONTH FROM start_time) = 2 THEN "FEBRUARY"
+      ELSE "MARCH"
+    END AS month_start_ride,
+    usertype, 
+    COUNT(trip_id) AS rides_per_month,
+    ROUND(AVG(tripduration/60), 2) AS avg_time_month
+  FROM `my-data-project-1-407722.cyclistic_trips.2019_Q1`
+  WHERE usertype = "Customer"
+  GROUP BY month_start_ride, usertype
+) AS combined_data
+GROUP BY month_start_ride, usertype
+ORDER BY rides_per_month DESC;
+
+| Row | month_start_ride | usertype   | rides_per_month | avg_time_month |
+|-----|------------------|------------|-----------------|----------------|
+| 1   | MARCH            | Subscriber | 149688          | 13.04          |
+| 2   | JANUARY          | Subscriber | 98670           | 15.65          |
+| 3   | FEBRUARY         | Subscriber | 93548           | 13.4           |
+| 4   | MARCH            | Customer   | 15923           | 52.29          |
+| 5   | JANUARY          | Customer   | 4602            | 47.32          |
+| 6   | FEBRUARY         | Customer   | 2638            | 145.56         |
+```
+We can check how differently both user types are leveraging the services. Customers take **longer rides** while Subscribers **take more rides**.
+
+Let's check now the user type distribution using the window function OVER():
+```sql
+SELECT
+  usertype AS `User type`,
+  COUNT(trip_id) AS `Number of trips`,
+  ROUND((COUNT(trip_id) / SUM(COUNT(trip_id)) OVER ()) * 100, 2) AS `Percentage`
+FROM `my-data-project-1-407722.cyclistic_trips.2019_Q1`
+GROUP BY usertype;
+
+| Row | User type   | Number of trips | Percentage |
+|-----|-------------|------------------|------------|
+| 1   | Subscriber  | 341,906          | 93.66      |
+| 2   | Customer    | 23,163           | 6.34       |
+```
+The subscribers represent the 93.66% of the rides.
 ### 4. Inspecting traffic patterns
+Now let's inspect the different stations from where the users start or end up a ride, since this is interesting to know for distribution and stocking purposes. The following query displays the top 10 stations more popular to start a ride:
+```sql
+SELECT
+  from_station_name, 
+  from_station_id,
+  COUNT(from_station_id) AS rides_started_from_station
+FROM 
+  `my-data-project-1-407722.cyclistic_trips.2019_Q1`
+GROUP BY
+  from_station_id, from_station_name
+ORDER BY
+  COUNT(from_station_id) DESC
+LIMIT 10
+
+| Row | Station of origin                | Id of station | Rides started from there |
+|-----|----------------------------------|---------------|---------------------------|
+| 1   | Clinton St & Washington Blvd     | 91            | 7,699                     |
+| 2   | Clinton St & Madison St          | 77            | 6,565                     |
+| 3   | Canal St & Adams St              | 192           | 6,342                     |
+| 4   | Columbus Dr & Randolph St        | 195           | 4,655                     |
+| 5   | Canal St & Madison St            | 174           | 4,571                     |
+| 6   | Kingsbury St & Kinzie St         | 133           | 4,395                     |
+| 7   | Michigan Ave & Washington St     | 43            | 3,992                     |
+| 8   | Franklin St & Monroe St          | 287           | 3,516                     |
+| 9   | LaSalle St & Jackson Blvd        | 283           | 3,252                     |
+| 10  | Dearborn St & Monroe St          | 49            | 3,246                     |
+```
+As we can see, Clinton St & Washington Blvd is from where users usually start their journeys.
 ### 5. Conclussions
 [Go back to portfolio](https://arortega94.github.io/)
