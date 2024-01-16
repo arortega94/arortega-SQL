@@ -159,16 +159,16 @@ The subscribers represent the 93.66% of the rides.
 Now let's inspect the different stations from where the users start or end up a ride, since this is interesting to know for distribution and stocking purposes. The following query displays the top 10 stations more popular to start a ride:
 ```sql
 SELECT
-  from_station_name, 
-  from_station_id,
-  COUNT(from_station_id) AS rides_started_from_station
+  from_station_name AS `Station of origin`,
+  from_station_id AS `Id of station`,
+  COUNT(from_station_id) AS `Rides started from there`
 FROM 
   `my-data-project-1-407722.cyclistic_trips.2019_Q1`
 GROUP BY
   from_station_id, from_station_name
 ORDER BY
   COUNT(from_station_id) DESC
-LIMIT 10
+LIMIT 10;
 
 | Row | Station of origin                | Id of station | Rides started from there |
 |-----|----------------------------------|---------------|---------------------------|
@@ -183,6 +183,63 @@ LIMIT 10
 | 9   | LaSalle St & Jackson Blvd        | 283           | 3,252                     |
 | 10  | Dearborn St & Monroe St          | 49            | 3,246                     |
 ```
-As we can see, Clinton St & Washington Blvd is from where users usually start their journeys.
+As we can see, Clinton St & Washington Blvd is from where users usually start their journeys. Let's check where user normally **end** their rides:
+```sql
+SELECT
+  to_station_name AS `Station of end`,
+  to_station_id AS `Id of station`,
+  COUNT(to_station_id) AS `Rides finished here`
+FROM 
+  `my-data-project-1-407722.cyclistic_trips.2019_Q1`
+GROUP BY
+  to_station_id, to_station_name
+ORDER BY
+  COUNT(to_station_id) DESC
+LIMIT 10;
+
+| Row | Station of end                   | Id of station | Rides finished here       |
+|-----|----------------------------------|---------------|---------------------------|
+| 1   | Clinton St & Washington Blvd     | 91            | 7,699                     |
+| 2   | Clinton St & Madison St          | 77            | 6,859                     |
+| 3   | Canal St & Adams St              | 192           | 6,744                     |
+| 4   | Canal St & Madison St            | 174           | 4,875                     |
+| 5   | Michigan Ave & Washington St     | 43            | 4,412                     |
+| 6   | Kingsbury St & Kinzie St         | 133           | 4,376                     |
+| 7   | LaSalle St & Jackson Blvd        | 283           | 3,304                     |
+| 8   | Clinton St & Lake St             | 66            | 3,297                     |
+| 9   | Dearborn St & Monroe St          | 49            | 3,137                     |
+```
+Similarly, it's also Clinton St & Washington Blvd with 7.699 rides finished there.
+
+Let's finally check the numbers of trips started and ended at the same station grouped by station:
+```sql
+SELECT 
+  from_station_name as `Station name`,
+  count(trip_id) AS `Round trips`
+FROM 
+  `my-data-project-1-407722.cyclistic_trips.2019_Q1`
+WHERE 
+  from_station_id = to_station_id
+group by 
+  from_station_name
+ORDER BY 
+  count(trip_id) DESC
+LIMIT 10
+
+| Row | Station name                          | Round trips |
+|-----|---------------------------------------|-------------|
+| 1   | Lake Shore Dr & Monroe St             | 302         |
+| 2   | Streeter Dr & Grand Ave               | 230         |
+| 3   | Millennium Park                       | 116         |
+| 4   | Michigan Ave & Oak St                 | 99          |
+| 5   | Central Park Ave & Bloomingdale Ave   | 78          |
+| 6   | Wabash Ave & Grand Ave                | 75          |
+| 7   | Shedd Aquarium                        | 74          |
+| 8   | Columbus Dr & Randolph St             | 65          |
+| 9   | Indiana Ave & Roosevelt Rd            | 60          |
+| 10  | Montrose Harbor                       | 58          |
+```
+Surprisingly, it's not Clinton St & Washington Blvd, but **Lake Shore Dr & Monroe St** with 302 round trips.
 ### 5. Conclussions
+
 [Go back to portfolio](https://arortega94.github.io/)
